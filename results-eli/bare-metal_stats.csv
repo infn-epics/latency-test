@@ -1,0 +1,9 @@
+metric,value
+count,1000
+avg_ms,0.382537
+median_ms,0.361064
+min_ms,0.307259
+max_ms,1.000598
+std_ms,0.047618
+p95_ms,0.430199
+p99_ms,0.470812
