@@ -1,0 +1,44 @@
+# Dockerfile for EPICS latency test IOC
+# Builds EPICS Base and runs softIoc with the test database
+
+FROM debian:bookworm-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    git \
+    libreadline-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build EPICS Base
+ARG EPICS_BASE_VERSION=7.0.8.1
+WORKDIR /build
+RUN git clone --branch R${EPICS_BASE_VERSION} --depth 1 \
+    https://github.com/epics-base/epics-base.git /build/epics-base
+
+WORKDIR /build/epics-base
+RUN make -j$(nproc)
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreadline8 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/epics-base /epics/base
+
+# Copy test IOC files
+COPY ioc/test.db /epics/ioc/test.db
+COPY ioc/start.sh /epics/ioc/start.sh
+RUN chmod +x /epics/ioc/start.sh
+
+ENV EPICS_CA_ADDR_LIST="0.0.0.0"
+ENV EPICS_CAS_INTF_ADDR_LIST="0.0.0.0"
+ENV EPICS_CA_AUTO_ADDR_LIST="YES"
+ENV LD_LIBRARY_PATH="/epics/base/lib/linux-x86_64"
+
+EXPOSE 5064/tcp 5064/udp 5065/tcp 5065/udp
+
+WORKDIR /epics/ioc
+CMD ["/epics/ioc/start.sh", "/epics/base"]

@@ -1,0 +1,89 @@
+# Kubernetes manifests for EPICS CA Latency Test
+# Scenario 1: Pod-to-Pod — IOC on Server A, Client on Server B
+# Scenario 3: External Client — IOC on Server A (Kubernetes), Client on Server B (bare metal)
+#
+# IMPORTANT: Replace <SERVER_A_HOSTNAME> and <SERVER_B_HOSTNAME> with actual node names.
+# Get node names with: kubectl get nodes -o wide
+
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: latency-test
+---
+# IOC Pod — Scheduled on Server A
+apiVersion: v1
+kind: Pod
+metadata:
+  name: latency-ioc
+  namespace: latency-test
+  labels:
+    app: latency-ioc
+    component: ioc
+    experiment: epics-latency
+spec:
+  restartPolicy: Always
+  nodeSelector:
+    kubernetes.io/hostname: "<SERVER_A_HOSTNAME>"
+  containers:
+    - name: ioc
+      image: ghcr.io/infn-epics/latency-test-ioc:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 5064
+          protocol: TCP
+          name: ca-tcp
+        - containerPort: 5064
+          protocol: UDP
+          name: ca-udp
+        - containerPort: 5065
+          protocol: TCP
+          name: ca-rep-tcp
+        - containerPort: 5065
+          protocol: UDP
+          name: ca-rep-udp
+      env:
+        - name: EPICS_CA_ADDR_LIST
+          value: "0.0.0.0"
+        - name: EPICS_CAS_INTF_ADDR_LIST
+          value: "0.0.0.0"
+        - name: EPICS_CA_AUTO_ADDR_LIST
+          value: "YES"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "64Mi"
+        limits:
+          cpu: "500m"
+          memory: "128Mi"
+---
+# IOC Service — Exposes CA ports for in-cluster and external access
+apiVersion: v1
+kind: Service
+metadata:
+  name: latency-ioc
+  namespace: latency-test
+  labels:
+    app: latency-ioc
+spec:
+  type: NodePort
+  selector:
+    app: latency-ioc
+  ports:
+    - name: ca-tcp
+      port: 5064
+      targetPort: 5064
+      protocol: TCP
+    - name: ca-udp
+      port: 5064
+      targetPort: 5064
+      protocol: UDP
+    - name: ca-repeater-tcp
+      port: 5065
+      targetPort: 5065
+      protocol: TCP
+    - name: ca-repeater-udp
+      port: 5065
+      targetPort: 5065
+      protocol: UDP

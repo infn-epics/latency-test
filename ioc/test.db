@@ -1,0 +1,15 @@
+## Minimal EPICS test database for latency measurement
+## Writing to TEST:SET triggers a forward link to TEST:READ
+
+record(ao, "TEST:SET")
+{
+    field(DESC, "Setpoint for latency test")
+    field(VAL,  "0")
+    field(FLNK, "TEST:READ")
+}
+
+record(ai, "TEST:READ")
+{
+    field(DESC, "Readback for latency test")
+    field(INP,  "TEST:SET NPP")
+}

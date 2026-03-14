@@ -1,0 +1,46 @@
+# Dockerfile for EPICS latency test client
+# Includes EPICS Base (for CA libraries) + Python client
+
+FROM debian:bookworm-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    git \
+    libreadline-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build EPICS Base
+ARG EPICS_BASE_VERSION=7.0.8.1
+WORKDIR /build
+RUN git clone --branch R${EPICS_BASE_VERSION} --depth 1 \
+    https://github.com/epics-base/epics-base.git /build/epics-base
+
+WORKDIR /build/epics-base
+RUN make -j$(nproc)
+
+# Runtime stage
+FROM python:3.12-slim-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libreadline8 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /build/epics-base /epics/base
+
+# Set EPICS environment for pyepics
+ENV EPICS_BASE=/epics/base
+ENV EPICS_CA_AUTO_ADDR_LIST="YES"
+ENV PYEPICS_LIBCA=/epics/base/lib/linux-x86_64/libca.so
+ENV LD_LIBRARY_PATH="/epics/base/lib/linux-x86_64"
+
+# Install Python dependencies
+COPY client/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy latency client
+COPY client/latency_client.py /app/latency_client.py
+
+WORKDIR /app
+ENTRYPOINT ["python3", "latency_client.py"]
+CMD ["--help"]

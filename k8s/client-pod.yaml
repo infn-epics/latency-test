@@ -1,0 +1,55 @@
+# Client Pod — Scheduled on Server B
+# Used for Scenario 1: Kubernetes Pod-to-Pod latency measurement
+#
+# IMPORTANT: Replace <SERVER_B_HOSTNAME> with actual node name.
+# The client will auto-discover the IOC via EPICS CA broadcast within the cluster.
+#
+# Results are stored in /app/results inside the container.
+# Use 'kubectl cp' to extract results after the test completes.
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: latency-client
+  namespace: latency-test
+  labels:
+    app: latency-client
+    component: client
+    experiment: epics-latency
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    kubernetes.io/hostname: "<SERVER_B_HOSTNAME>"
+  containers:
+    - name: client
+      image: ghcr.io/infn-epics/latency-test-client:latest
+      imagePullPolicy: Never
+      command:
+        - python3
+        - latency_client.py
+        - "--iterations"
+        - "1000"
+        - "--scenario"
+        - "k8s-pod-to-pod"
+        - "--output"
+        - "/app/results"
+      env:
+        # Point CA search to the IOC service within the cluster
+        - name: EPICS_CA_ADDR_LIST
+          value: "latency-ioc.latency-test.svc.cluster.local"
+        - name: EPICS_CA_AUTO_ADDR_LIST
+          value: "NO"
+      volumeMounts:
+        - name: results
+          mountPath: /app/results
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+  volumes:
+    - name: results
+      emptyDir: {}
