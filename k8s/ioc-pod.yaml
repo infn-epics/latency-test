@@ -30,6 +30,11 @@ spec:
     - name: ioc
       image: ghcr.io/infn-epics/latency-test-ioc:latest
       imagePullPolicy: Always
+      command:
+        - /bin/sh
+        - -c
+        - |
+          tail -f /dev/null | /epics/base/bin/linux-x86_64/softIoc -d /epics/ioc/test.db
       ports:
         - containerPort: 5064
           protocol: TCP
