@@ -29,7 +29,7 @@ spec:
   containers:
     - name: ioc
       image: ghcr.io/infn-epics/latency-test-ioc:latest
-      imagePullPolicy: Never
+      imagePullPolicy: Always
       ports:
         - containerPort: 5064
           protocol: TCP

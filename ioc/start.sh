@@ -24,4 +24,5 @@ echo "Starting latency test IOC..."
 echo "  EPICS_CA_SERVER_PORT=${EPICS_CA_SERVER_PORT}"
 echo "  EPICS_CA_REPEATER_PORT=${EPICS_CA_REPEATER_PORT}"
 
-"${EPICS_BASE}/bin/linux-x86_64/softIoc" -d test.db
+# Use tail to keep stdin open so softIoc doesn't exit on EOF in containers
+tail -f /dev/null | "${EPICS_BASE}/bin/linux-x86_64/softIoc" -d test.db

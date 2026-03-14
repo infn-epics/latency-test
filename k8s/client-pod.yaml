@@ -24,22 +24,21 @@ spec:
   containers:
     - name: client
       image: ghcr.io/infn-epics/latency-test-client:latest
-      imagePullPolicy: Never
+      imagePullPolicy: Always
       command:
-        - python3
-        - latency_client.py
-        - "--iterations"
-        - "1000"
-        - "--scenario"
-        - "k8s-pod-to-pod"
-        - "--output"
-        - "/app/results"
-      env:
-        # Point CA search to the IOC service within the cluster
-        - name: EPICS_CA_ADDR_LIST
-          value: "latency-ioc.latency-test.svc.cluster.local"
-        - name: EPICS_CA_AUTO_ADDR_LIST
-          value: "NO"
+        - /bin/sh
+        - -c
+        - |
+          # Resolve IOC service DNS to IP (EPICS CA requires IP addresses)
+          IOC_IP=$(getent hosts latency-ioc.latency-test.svc.cluster.local | awk '{print $1}')
+          echo "Resolved IOC service IP: ${IOC_IP}"
+          export EPICS_CA_ADDR_LIST="${IOC_IP}"
+          export EPICS_CA_AUTO_ADDR_LIST=NO
+          python3 latency_client.py \
+            --iterations 1000 \
+            --scenario k8s-pod-to-pod \
+            --output /app/results
+      env: []
       volumeMounts:
         - name: results
           mountPath: /app/results
